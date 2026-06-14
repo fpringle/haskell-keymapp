@@ -10,6 +10,8 @@ let
   fourmolu = "${nixpkgs.haskellPackages.fourmolu}/bin/fourmolu";
   nixpkgs-fmt = "${nixpkgs.nixpkgs-fmt}/bin/nixpkgs-fmt";
 
+  generate-proto = import ../scripts/generate-proto.nix { inherit nixpkgs; };
+
   # runAllFiles "foo" will output a hook entry that loops through
   # all the files supplied by pre-commit and call "foo" on all of them.
   # i.e. `runAllFiles` is basically like haskell's `traverse`.
@@ -59,13 +61,22 @@ nix-pre-commit-hooks.run {
       files = nix-file-pattern;
     };
 
+    "3-generate-proto" = {
+      name = "generate-proto";
+      enable = true;
+      description = "Run `protoc` to generate Haskell code from a protobuf file.";
+      entry = nixpkgs.lib.getExe generate-proto;
+      pass_filenames = false;
+      files = "proto/.*";
+    };
+
     # by default, pre-commit fails if a hook modifies files, but doesn't
     # tell us which files have been modified. Smart, right?
     # this workaround runs a `git diff` to print any files that have
     # been modified by previous hooks.
     # NOTE: this should always be the last hook run, so when adding hooks
     # make sure to add them above this one.
-    "3-git-diff" = {
+    "4-git-diff" = {
       name = "git diff";
       enable = true;
       entry = "git diff --name-only --exit-code";
