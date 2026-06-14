@@ -81,9 +81,9 @@ newtype Sustain = Sustain {asInt32 :: Int32}
   deriving (Show, Eq, Ord, Enum, Num)
 
 data Keyboard = Keyboard
-  { id :: KeyboardId
-  , friendlyName :: Text
-  , isConnected :: Bool
+  { id :: !KeyboardId
+  , friendlyName :: !Text
+  , isConnected :: !Bool
   }
   deriving (Show, Eq)
 
@@ -96,9 +96,9 @@ decodeKeyboard keyboard =
     }
 
 data ConnectedKeyboard = ConnectedKeyboard
-  { friendlyName :: Text
-  , firmwareVersion :: Text
-  , currentLayer :: Layer
+  { friendlyName :: !Text
+  , firmwareVersion :: !Text
+  , currentLayer :: !Layer
   }
   deriving (Show, Eq)
 
@@ -111,8 +111,8 @@ decodeConnectedKeyboard keyboard =
     }
 
 data Status = Status
-  { keymappVersion :: Text
-  , connectedKeyboard :: Maybe ConnectedKeyboard
+  { keymappVersion :: !Text
+  , connectedKeyboard :: !(Maybe ConnectedKeyboard)
   }
   deriving (Show, Eq)
 
