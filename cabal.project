@@ -1,5 +1,6 @@
 packages:
     keymapp/
+    examples/
 
 -- only build documentation on demand.
 documentation: False

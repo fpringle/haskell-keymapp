@@ -146,7 +146,7 @@ commandP =
 runCommand :: Command -> IO ()
 runCommand cmd = do
   server <- ServerUnix <$> getXdgDirectory XdgConfig ".keymapp/keymapp.sock"
-  success :: Success <- runClient def server $ case cmd of
+  success <- runClient def server $ case cmd of
     GetStatus -> getStatus >>= handleStatus
     GetKeyboards -> getKeyboards >>= handleKeyboards
     ConnectKeyboard keyboardId -> connectKeyboard keyboardId
