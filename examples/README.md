@@ -10,4 +10,11 @@ Flashes a rainbow across the keyboard, then back to normal.
 
 ```bash
 cabal run keymap-rainbow
+
+## Clock
+
+Displays an (imperfect) clock using the keyboard's LEDs, updating once per minute.
+
+```bash
+cabal run keymap-clock
 ```
