@@ -13,6 +13,7 @@ homepage:           https://github.com/fpringle/keymapp
 build-type:         Simple
 category:           Control
 extra-doc-files:    CHANGELOG.md
+                    README.md
 
 common warnings
   ghc-options: -Wall -Wno-unused-do-bind
