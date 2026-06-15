@@ -21,7 +21,7 @@ common warnings
 common deps
   build-depends:
     , base               >= 4 && < 5
-    , grapesy            >= 1.1 && < 1.2
+    , grapesy            >= 1.0 && < 1.2
     , proto-lens         >= 0.7 && < 0.8
     , proto-lens-runtime >= 0.7 && < 0.8
     , text               >= 1.2 && < 2.2
