@@ -7,4 +7,10 @@ and this project adheres to [Haskell Package Versioning Policy](https://pvp.hask
 
 ## [Unreleased]
 
-## [0.1.0] - TODO
+### Added
+
+- A working client implementation for the Keymapp API
+- A CLI based on [kontroll](https://github.com/zsa/kontroll)
+- Full documentation and library examples
+
+[unreleased]: https://github.com/fpringle/haskell-keymapp/compare/51c565c...HEAD
