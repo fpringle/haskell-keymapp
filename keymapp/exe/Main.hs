@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedRecordDot #-}
-
 module Main where
 
 import Control.Applicative ((<**>))
@@ -9,12 +7,12 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Colour
 import Data.Colour.SRGB (sRGB24reads)
 import Data.Foldable (fold)
-import Data.Text qualified as T
-import Data.Text.IO qualified as T
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Network.GRPC.Client
 import Network.GRPC.Common
 import Numeric.Natural (Natural)
-import Options.Applicative qualified as O
+import qualified Options.Applicative as O
 import System.Directory
 import System.Exit (exitFailure)
 
@@ -146,7 +144,7 @@ commandP =
 runCommand :: Command -> IO ()
 runCommand cmd = do
   server <- ServerUnix <$> getXdgDirectory XdgConfig ".keymapp/keymapp.sock"
-  success <- runClient def server $ case cmd of
+  Success success <- runClient def server $ case cmd of
     GetStatus -> getStatus >>= handleStatus
     GetKeyboards -> getKeyboards >>= handleKeyboards
     ConnectKeyboard keyboardId -> connectKeyboard keyboardId
@@ -163,13 +161,13 @@ runCommand cmd = do
     IncreaseBrightness n -> fold <$> replicateM (fromIntegral n) increaseBrightness
     DecreaseBrightness n -> fold <$> replicateM (fromIntegral n) decreaseBrightness
 
-  unless success.asBool $ do
+  unless success $ do
     putStrLn "The Keymapp API reported a failure."
     exitFailure
 
 printKeyboard :: Keyboard -> IO ()
-printKeyboard (Keyboard kId name connected) = do
-  T.putStrLn $ "- id:        " <> T.pack (show kId.asInt32)
+printKeyboard (Keyboard (KeyboardId kId) name connected) = do
+  T.putStrLn $ "- id:        " <> T.pack (show kId)
   T.putStrLn $ "  name:      " <> name
   T.putStrLn $ "  connected: " <> (if connected then "true" else "false")
 
@@ -184,10 +182,11 @@ printStatus (Status version connected) = do
   case connected of
     Nothing -> T.putStrLn "keyboard:  none"
     Just ConnectedKeyboard {..} -> do
+      let Layer layer = currentLayer
       T.putStrLn "keyboard:"
       T.putStrLn $ "  name:    " <> friendlyName
       T.putStrLn $ "  version: " <> firmwareVersion
-      T.putStrLn $ "  layer:   " <> T.pack (show currentLayer.asInt32)
+      T.putStrLn $ "  layer:   " <> T.pack (show layer)
 
 handleStatus :: Status -> KeymappClient IO Success
 handleStatus status = do

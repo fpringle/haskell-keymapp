@@ -37,7 +37,6 @@ common extensions
     DerivingVia
     DataKinds
     GeneralizedNewtypeDeriving
-    ImportQualifiedPost
     OverloadedStrings
     RecordWildCards
     TypeApplications

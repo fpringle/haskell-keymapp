@@ -68,7 +68,7 @@ import Data.Traversable (for)
 import Network.GRPC.Client (ConnParams, Connection, Server (..), rpc, withConnection)
 import Network.GRPC.Client.StreamType.CanCallRPC
 import Network.GRPC.Common.Protobuf
-import Proto.Keymapp qualified as Proto
+import qualified Proto.Keymapp as Proto
 import System.Directory
 
 {- | Most of the Keymapp server endpoints return a boolean success value without any additional information.
