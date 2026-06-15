@@ -18,3 +18,7 @@ keyboard:
   version: Mvvpr/orAw9d
   layer:   1
 ```
+
+## LED mapping
+
+Some of the commands require you to provide an LED index. See [this](https://github.com/fpringle/haskell-keymapp/blob/main/keymapp/led_mapping.md) table for a mapping of which keyboard keys correspond to which indices on a ZSA Moonlander MK1.
