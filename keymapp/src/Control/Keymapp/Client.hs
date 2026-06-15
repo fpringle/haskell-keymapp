@@ -233,6 +233,7 @@ newtype KeymappClient m a = KeymappClient (ReaderT Connection m a)
     , Applicative
     , Monad
     , MonadIO
+    , MonadUnliftIO
     , MonadFail
     , MonadThrow
     , MonadCatch
