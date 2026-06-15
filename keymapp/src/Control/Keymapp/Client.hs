@@ -1,12 +1,19 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedLabels #-}
 
+{- | This module provides a monad for interacting with the Keymapp API, and functions for calling its
+endpoints via gRPC.
+-}
 module Control.Keymapp.Client
   ( -- * Monad transformer
     KeymappClient
   , runClient
 
     -- * Core commands
+
+    {- | These functions are more or less a one-to-one-translation from the
+    [protobuf specification](https://github.com/zsa/kontroll/blob/main/proto/keymapp.proto) of the API.
+    -}
   , getStatus
   , getKeyboards
   , connectKeyboard
@@ -21,6 +28,10 @@ module Control.Keymapp.Client
   , decreaseBrightness
 
     -- ** Derived commands
+
+    {- | These operations aren't defined by the Keymapp API, but are provided for convenience
+    and mostly inspired by functions in [Kontroll](https://github.com/zsa/kontroll).
+    -}
   , restoreRGBLeds
   , restoreStatusLeds
   , setStatusLedAll
@@ -60,26 +71,39 @@ import Network.GRPC.Common.Protobuf
 import Proto.Keymapp qualified as Proto
 import System.Directory
 
+{- | Most of the Keymapp server endpoints return a boolean success value without any additional information.
+
+We derive 'Semigroup' and 'Monoid' instances via t'All'. In other words if we do a bunch of operations,
+we define the overall operation to be a success only if all of the operations succeeded.
+-}
 newtype Success = Success {asBool :: Bool}
   deriving (Show, Eq)
   deriving (Semigroup, Monoid) via All
 
+-- | Boolean newtype used by the 'setStatusLed'* functions. Indicates whether a status LED should be turned on or off.
 newtype On = On {asBool :: Bool}
   deriving (Show, Eq)
 
+-- | The ID of a keyboard, as returned by the list endpoints ('getKeyboards').
 newtype KeyboardId = KeyboardId {asInt32 :: Int32}
   deriving (Show, Eq, Ord, Enum, Num)
 
+-- | The index of an LED. TODO: mapping
 newtype LED = LED {asInt32 :: Int32}
   deriving (Show, Eq, Ord, Enum, Num)
 
+-- | The index of a layer.
 newtype Layer = Layer {asInt32 :: Int32}
   deriving (Show, Eq, Ord, Enum, Num)
 
--- | Delay in milliseconds
+{- | Delay in milliseconds. This is used for most of the endpoints that change lights and colours -
+if the sustain is set to 0, the change is permanent; otherwise, a sustain of X means the change will
+last for X milliseconds and then revert.
+-}
 newtype Sustain = Sustain {asInt32 :: Int32}
   deriving (Show, Eq, Ord, Enum, Num)
 
+-- | Details of a keyboard as returned by the 'getKeyboards' endpoint.
 data Keyboard = Keyboard
   { id :: !KeyboardId
   , friendlyName :: !Text
@@ -95,6 +119,7 @@ decodeKeyboard keyboard =
     , isConnected = keyboard ^. #isConnected
     }
 
+-- | Details of the connected keyboard as returned by the 'getStatus' endpoint.
 data ConnectedKeyboard = ConnectedKeyboard
   { friendlyName :: !Text
   , firmwareVersion :: !Text
@@ -110,6 +135,7 @@ decodeConnectedKeyboard keyboard =
     , currentLayer = Layer $ keyboard ^. #currentLayer
     }
 
+-- | Status of the API as returned by the 'getStatus' endpoint.
 data Status = Status
   { keymappVersion :: !Text
   , connectedKeyboard :: !(Maybe ConnectedKeyboard)
@@ -149,27 +175,35 @@ decodeBrightnessUpdateReply reply = Success $ reply ^. #success
 
 ------------------------------------------------------------
 
+-- | Get the status of the Keymapp API, including the connected keyboard.
 getStatus :: (CanCallRPC m) => m Status
 getStatus = decodeGetStatusReply <$> nonStreaming (rpc @(Protobuf KeyboardService "getStatus")) defMessage
 
+-- | List all the keyboards connected to your computer that the Keymapp server can talk to.
 getKeyboards :: (CanCallRPC m) => m [Keyboard]
 getKeyboards = decodeGetKeyboardsReply <$> nonStreaming (rpc @(Protobuf KeyboardService "getKeyboards")) defMessage
 
+-- | Connect to a specific keyboard. The t'KeyboardId' is an index from the list that 'getKeyboards' returns.
 connectKeyboard :: (CanCallRPC m) => KeyboardId -> m Success
 connectKeyboard (KeyboardId keyboardId) = decodeConnectKeyboardReply <$> nonStreaming (rpc @(Protobuf KeyboardService "connectKeyboard")) (defMessage & #id .~ keyboardId)
 
+-- | Connect to the first keyboard detected by the Keymapp server.
 connectAnyKeyboard :: (CanCallRPC m) => m Success
 connectAnyKeyboard = decodeConnectKeyboardReply <$> nonStreaming (rpc @(Protobuf KeyboardService "connectAnyKeyboard")) defMessage
 
+-- | Disconnect from the currently connected keyboard.
 disconnectKeyboard :: (CanCallRPC m) => m Success
 disconnectKeyboard = decodeDisconnectKeyboardReply <$> nonStreaming (rpc @(Protobuf KeyboardService "disconnectKeyboard")) defMessage
 
+-- | Set the layer of the currently connected keyboard.
 setLayer :: (CanCallRPC m) => Layer -> m Success
 setLayer (Layer layerId) = decodeSetLayerReply <$> nonStreaming (rpc @(Protobuf KeyboardService "setLayer")) (defMessage & #layer .~ layerId)
 
+-- | Unset the layer of the currently connected keyboard.
 unsetLayer :: (CanCallRPC m) => Layer -> m Success
 unsetLayer (Layer layerId) = decodeSetLayerReply <$> nonStreaming (rpc @(Protobuf KeyboardService "unsetLayer")) (defMessage & #layer .~ layerId)
 
+-- | Sets the RGB color of a LED.
 setRGBLed :: (CanCallRPC m) => LED -> Colour Double -> Sustain -> m Success
 setRGBLed (LED led) colour (Sustain sustain) = do
   let RGB r g b = toSRGB24 colour
@@ -184,6 +218,7 @@ setRGBLed (LED led) colour (Sustain sustain) = do
           & #blue .~ fromIntegral b
       )
 
+-- | Sets the RGB color of all LEDs.
 setRGBAll :: (CanCallRPC m) => Colour Double -> Sustain -> m Success
 setRGBAll colour (Sustain sustain) = do
   let RGB r g b = toSRGB24 colour
@@ -197,9 +232,11 @@ setRGBAll colour (Sustain sustain) = do
           & #blue .~ fromIntegral b
       )
 
+-- | Restores the RGB color of all LEDs to their default.
 restoreRGBLeds :: (CanCallRPC m) => m Success
 restoreRGBLeds = setRGBAll white (Sustain 1)
 
+-- | Set / unset a status LED.
 setStatusLed :: (CanCallRPC m) => LED -> On -> Sustain -> m Success
 setStatusLed (LED led) (On on) (Sustain sustain) =
   decodeSetStatusLedReply
@@ -211,22 +248,31 @@ setStatusLed (LED led) (On on) (Sustain sustain) =
           & #sustain .~ sustain
       )
 
+-- | Set / unset all status LEDs.
 setStatusLedAll :: (CanCallRPC m) => On -> Sustain -> m Success
 setStatusLedAll on sustain =
   fmap fold . for [0 .. 2] $ \led -> setStatusLed (LED led) on sustain
 
+-- | Restores all status LEDs to their default.
 restoreStatusLeds :: (CanCallRPC m) => m Success
 restoreStatusLeds = setStatusLed (LED 0) (On False) (Sustain 1)
 
+-- | Increase the brightness of the keyboard's LEDs.
 increaseBrightness :: (CanCallRPC m) => m Success
 increaseBrightness = decodeBrightnessUpdateReply <$> nonStreaming (rpc @(Protobuf KeyboardService "increaseBrightness")) defMessage
 
+-- | Decrease the brightness of the keyboard's LEDs.
 decreaseBrightness :: (CanCallRPC m) => m Success
 decreaseBrightness = decodeBrightnessUpdateReply <$> nonStreaming (rpc @(Protobuf KeyboardService "decreaseBrightness")) defMessage
 
 ------------------------------------------------------------
 -- Monad transformer
 
+{- | A monad transformer for calling the Keymapp API.
+Basically just hides the details of the connection to the gRPC server.
+
+TODO: catch errors?
+-}
 newtype KeymappClient m a = KeymappClient (ReaderT Connection m a)
   deriving newtype
     ( Functor
@@ -241,6 +287,10 @@ newtype KeymappClient m a = KeymappClient (ReaderT Connection m a)
     , CanCallRPC
     )
 
+{- | Run a t'KeymappClient' action using gRPC connection details (see the grapesy documentation for more details).
+
+To get the standard 'Server' details, see 'defaultKeymappSocket'.
+-}
 runClient :: (MonadUnliftIO m) => ConnParams -> Server -> KeymappClient m a -> m a
 runClient params server (KeymappClient rma) =
   withRunInIO $ \unlift ->
@@ -250,5 +300,6 @@ runClient params server (KeymappClient rma) =
 ------------------------------------------------------------
 -- Utils
 
+-- | The default Keymapp server runs at @~/.config/keymapp/keymapp.socket@
 defaultKeymappSocket :: (MonadIO m) => m Server
 defaultKeymappSocket = liftIO $ ServerUnix <$> getXdgDirectory XdgConfig ".keymapp/keymapp.sock"
