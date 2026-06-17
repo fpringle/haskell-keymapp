@@ -9,6 +9,7 @@ import Data.List ((\\))
 import Data.Time.LocalTime (TimeOfDay (..), getZonedTime, localTimeOfDay, zonedTimeToLocalTime)
 import Network.GRPC.Client.StreamType.CanCallRPC
 import Network.GRPC.Common
+import System.Posix.Signals
 import UnliftIO
 
 -- all nine digits on the left-most column
@@ -161,15 +162,28 @@ printDigitsIncremental oldDigits newDigits = do
 main :: IO ()
 main = do
   server <- defaultKeymappSocket
+
+  finish <- newTVarIO False
+  let handler = do
+        atomically $ writeTVar finish True
+        pure ()
+  installHandler keyboardSignal (Catch handler) Nothing
+
   runClient def server $ do
     setRGBAll offColour (Sustain 0)
     time <- getTime
     let digits = timeOfDayDigits time
     printDigits onColour digits
     let loop oldDigits = do
-          liftIO $ threadDelay 1000000
-          newDigits <- timeOfDayDigits <$> getTime
-          printDigitsIncremental oldDigits newDigits
-          loop newDigits
+          shouldFinish <- readTVarIO finish
+          if shouldFinish
+            then do
+              restoreRGBLeds
+              pure ()
+            else do
+              liftIO $ threadDelay 1000000
+              newDigits <- timeOfDayDigits <$> getTime
+              printDigitsIncremental oldDigits newDigits
+              loop newDigits
 
     loop digits
