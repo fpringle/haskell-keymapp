@@ -10,6 +10,7 @@ Flashes a rainbow across the keyboard, then back to normal.
 
 ```bash
 cabal run keymap-rainbow
+```
 
 ## Clock
 
