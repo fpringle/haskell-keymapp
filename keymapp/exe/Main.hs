@@ -1,3 +1,6 @@
+{-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE LambdaCase #-}
+
 module Main where
 
 import Control.Applicative ((<**>))
@@ -141,9 +144,38 @@ commandP =
         <> O.command "decrease-brightness" (O.info decreaseBrightnessP (O.progDesc "Decrease the brightness of the keyboard's LEDs."))
     )
 
-runCommand :: Command -> IO ()
-runCommand cmd = do
-  server <- ServerUnix <$> getXdgDirectory XdgConfig ".keymapp/keymapp.sock"
+globalOptsP :: O.Parser GlobalOptions
+globalOptsP = do
+  socketPath <- O.option (Path <$> O.auto) (O.long "socket-path" <> O.short 's' <> O.metavar "PATH" <> O.value DefaultPath)
+  pure GlobalOptions {..}
+
+optsP :: O.Parser Opts
+optsP = do
+  command <- commandP
+  globalOptions <- globalOptsP
+  pure Opts {..}
+
+data SocketPath
+  = DefaultPath
+  | Path FilePath
+
+mkServer :: SocketPath -> IO Server
+mkServer = \case
+  DefaultPath -> ServerUnix <$> getXdgDirectory XdgConfig ".keymapp/keymapp.sock"
+  Path path -> pure $ ServerUnix path
+
+newtype GlobalOptions = GlobalOptions
+  { socketPath :: SocketPath
+  }
+
+data Opts = Opts
+  { command :: Command
+  , globalOptions :: GlobalOptions
+  }
+
+runOpts :: Opts -> IO ()
+runOpts (Opts cmd GlobalOptions {..}) = do
+  server <- mkServer socketPath
   Success success <- runClient def server $ case cmd of
     GetStatus -> getStatus >>= handleStatus
     GetKeyboards -> getKeyboards >>= handleKeyboards
@@ -201,10 +233,10 @@ main = do
             <> O.showHelpOnError
             <> O.columns 100
             <> O.helpShowGlobals
-  cmd <-
+  opts <-
     O.customExecParser prefs $
-      O.info (commandP <**> O.helper) $
+      O.info (optsP <**> O.helper) $
         O.fullDesc
           <> O.progDesc "progdesc"
           <> O.header "Call a gRPC server running the Keymapp API in order to control your ZSA keyboard."
-  runCommand cmd
+  runOpts opts
