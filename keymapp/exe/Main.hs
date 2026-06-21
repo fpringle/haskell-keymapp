@@ -237,6 +237,5 @@ main = do
     O.customExecParser prefs $
       O.info (optsP <**> O.helper) $
         O.fullDesc
-          <> O.progDesc "progdesc"
           <> O.header "Call a gRPC server running the Keymapp API in order to control your ZSA keyboard."
   runOpts opts
