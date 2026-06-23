@@ -3,7 +3,7 @@
 
 module Main where
 
-import Control.Applicative ((<**>))
+import Control.Applicative ((<**>), (<|>))
 import Control.Keymapp.Client
 import Control.Monad (replicateM, unless)
 import Control.Monad.IO.Class (liftIO)
@@ -144,28 +144,39 @@ commandP =
         <> O.command "decrease-brightness" (O.info decreaseBrightnessP (O.progDesc "Decrease the brightness of the keyboard's LEDs."))
     )
 
+addressP :: O.Parser Address
+addressP = do
+  addressHost <- O.option O.str (O.long "address-host" <> O.metavar "HOST")
+  addressPort <- O.option O.auto (O.long "address-port" <> O.metavar "PORT")
+  addressAuthority <- O.optional $ O.option O.str (O.long "address-authority" <> O.metavar "AUTH")
+  pure Address {..}
+
 globalOptsP :: O.Parser GlobalOptions
 globalOptsP = do
-  socketPath <- O.option (Path <$> O.auto) (O.long "socket-path" <> O.short 's' <> O.metavar "PATH" <> O.value DefaultPath)
+  socketPath <- insecureP <|> socketP <|> pure DefaultSocket
   pure GlobalOptions {..}
+  where
+    insecureP, socketP :: O.Parser ServerOpt
+    insecureP = Server . ServerInsecure <$> addressP
+    socketP = Server . ServerUnix <$> O.option O.str (O.long "socket-path" <> O.short 's' <> O.metavar "PATH")
 
 optsP :: O.Parser Opts
 optsP = do
-  command <- commandP
   globalOptions <- globalOptsP
+  command <- commandP
   pure Opts {..}
 
-data SocketPath
-  = DefaultPath
-  | Path FilePath
+data ServerOpt
+  = DefaultSocket
+  | Server Server
 
-mkServer :: SocketPath -> IO Server
+mkServer :: ServerOpt -> IO Server
 mkServer = \case
-  DefaultPath -> ServerUnix <$> getXdgDirectory XdgConfig ".keymapp/keymapp.sock"
-  Path path -> pure $ ServerUnix path
+  DefaultSocket -> ServerUnix <$> getXdgDirectory XdgConfig ".keymapp/keymapp.sock"
+  Server server -> pure server
 
 newtype GlobalOptions = GlobalOptions
-  { socketPath :: SocketPath
+  { socketPath :: ServerOpt
   }
 
 data Opts = Opts
