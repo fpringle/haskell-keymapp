@@ -16,6 +16,8 @@ import Network.GRPC.Client
 import Network.GRPC.Common
 import Numeric.Natural (Natural)
 import qualified Options.Applicative as O
+import qualified Options.Applicative.Help as O hiding (fullDesc)
+import qualified Prettyprinter.Util as P
 import System.Directory
 import System.Exit (exitFailure)
 
@@ -236,17 +238,34 @@ handleStatus status = do
   liftIO $ printStatus status
   pure $ Success True
 
+footer :: O.Doc
+footer =
+  O.vsep
+    [ "* Specifying server address"
+    , P.reflow "By default the client will try connect to a Keymapp server running at the default Unix socket address ("
+        <> "~/.config/keymapp/keymapp.socket"
+        <> P.reflow ")."
+          O.<+> P.reflow "However if you want to conenct to a server at another address, there are currently two ways to do so."
+    , O.line
+    , "** Different unix socket"
+    , "  $ keymapp status --socket-path /tmp/keymapp.socket"
+    , O.line
+    , "** HTTP server"
+    , "  $ keymapp status --address-host \"localhost\" --address-port \"3000\""
+    ]
+
 main :: IO ()
 main = do
   let prefs =
         O.prefs $
           O.showHelpOnEmpty
             <> O.showHelpOnError
-            <> O.columns 100
+            <> O.columns 90
             <> O.helpShowGlobals
   opts <-
     O.customExecParser prefs $
       O.info (optsP <**> O.helper) $
         O.fullDesc
           <> O.header "Call a gRPC server running the Keymapp API in order to control your ZSA keyboard."
+          <> O.footerDoc (Just footer)
   runOpts opts
