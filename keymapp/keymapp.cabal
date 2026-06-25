@@ -64,8 +64,8 @@ executable keymapp
   main-is:          Main.hs
   build-depends:
     , keymapp
-    , optparse-applicative >= 0.17 && < 0.20
-    , prettyprinter
+    , optparse-applicative >= 0.18 && < 0.20
+    , prettyprinter >= 1.7 && < 1.8
 
   hs-source-dirs:   exe
   default-language: Haskell2010
