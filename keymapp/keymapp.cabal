@@ -9,7 +9,7 @@ license-file:       LICENSE
 author:             Frederick Pringle
 maintainer:         frederick.pringle@fpringle.com
 copyright:          Copyright(c) Frederick Pringle 2026
-homepage:           https://github.com/fpringle/keymapp
+homepage:           https://github.com/fpringle/haskell-keymapp
 build-type:         Simple
 category:           Control
 extra-doc-files:    CHANGELOG.md
